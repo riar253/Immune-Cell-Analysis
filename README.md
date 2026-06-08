@@ -8,17 +8,19 @@ the results through an interactive Streamlit dashboard.
 
 ## Quick start
 
-The project is driven by a `Makefile` with three targets. From the repository root:
+The project is driven by a `Makefile`. From the repository root:
 
 ```bash
 make setup       # create a virtual environment and install dependencies
 make pipeline    # build the database and run all analyses (Parts 1–4)
 make dashboard   # launch the interactive dashboard
+make clean       # remove the venv and generated outputs
 ```
 
 `make setup` creates a `venv/` and installs `requirements.txt`. Every target
 invokes the virtual environment's interpreter directly, so you do **not** need to
-activate the venv yourself.
+activate the venv yourself. (Running `make` with no target is equivalent to
+`make setup pipeline dashboard`.)
 
 ### Reproducing the outputs
 
@@ -74,7 +76,7 @@ subjects (1) ──< samples (1) ──< cell_counts
 | Column | Type | Notes |
 |--------|------|-------|
 | `sample_id` | TEXT PK | |
-| `subject_id` | TEXT FK → subjects | |
+| `subject_id` | TEXT NOT NULL, FK → subjects | |
 | `sample_type` | TEXT | e.g. PBMC |
 | `time_from_treatment_start` | INTEGER | timepoint; baseline = 0 |
 
@@ -82,9 +84,9 @@ subjects (1) ──< samples (1) ──< cell_counts
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `sample_id` | TEXT FK → samples | |
-| `population` | TEXT | b_cell, cd8_t_cell, cd4_t_cell, nk_cell, monocyte |
-| `count` | INTEGER | |
+| `sample_id` | TEXT NOT NULL, FK → samples | |
+| `population` | TEXT NOT NULL | b_cell, cd8_t_cell, cd4_t_cell, nk_cell, monocyte |
+| `count` | INTEGER NOT NULL | |
 | | | composite PK = (`sample_id`, `population`) |
 
 ### Design rationale
@@ -98,7 +100,8 @@ subjects (1) ──< samples (1) ──< cell_counts
   rather than as five fixed columns. This was chosen deliberately because:
   - the analytical questions are all *per population* (relative frequency,
     per-population boxplots, per-population statistics), and the long shape
-    matches that grain — Part 2's required output is a direct `GROUP BY`;
+    matches that grain — Part 2's required output is a single straightforward
+    aggregation query rather than an unpivot;
   - adding a new cell population later means inserting rows, not an
     `ALTER TABLE` plus query rewrites;
   - it generalizes to other per-sample measurements without schema change.
@@ -141,7 +144,7 @@ and varied analytics:
 ├── load_data.py     # Part 1: build schema + load CSV into cell_count.db
 ├── analysis.py      # Parts 2–4: analysis functions + CLI pipeline (main)
 ├── app.py           # Streamlit dashboard (imports analysis.py)
-├── Makefile         # setup / pipeline / dashboard targets
+├── Makefile         # setup / pipeline / dashboard / clean targets
 ├── requirements.txt
 ├── cell-count.csv   # input data
 └── output/          # generated tables and plots
